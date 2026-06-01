@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ProductIQ</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter','sans-serif'] }
+      }
+    }
+  }
+</script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0f1e;font-family:'Inter',sans-serif;color:#e2e8f0;overflow-x:hidden}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:#0f172a}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+  .sidebar{width:260px;min-width:260px;background:#0f172a;border-right:1px solid #1e293b;height:100vh;overflow-y:auto;position:fixed;left:0;top:0;z-index:40}
+  .main{margin-left:260px;min-height:100vh}
+  .card{background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:1.25rem 1.5rem}
+  .kpi{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:1rem 1.1rem;position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ac,#6366f1)}
+  .kpi-label{font-size:.68rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.3rem}
+  .kpi-value{font-size:1.5rem;font-weight:800;line-height:1}
+  .tab-btn{padding:.45rem 1rem;border-radius:8px;font-size:.82rem;font-weight:600;color:#64748b;cursor:pointer;border:none;background:transparent;transition:all .2s;font-family:'Inter',sans-serif}
+  .tab-btn.active{background:#1e293b;color:#f1f5f9}
+  .btn-primary{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:.6rem 1.6rem;font-weight:600;font-size:.88rem;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,.35);transition:all .2s;font-family:'Inter',sans-serif}
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px)}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-secondary{background:#1e293b;color:#a5b4fc;border:1px solid #4338ca;border-radius:10px;padding:.5rem 1.2rem;font-weight:600;font-size:.82rem;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+  .agent-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .agent-dot.done{background:#22c55e}
+  .agent-dot.active{background:#818cf8;animation:pulse 1s infinite}
+  .agent-dot.pending{background:#334155}
+  .agent-dot.error{background:#ef4444}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .progress-bar{height:4px;background:#1e293b;border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:99px;transition:width .4s ease}
+  .insight-box{white-space:pre-wrap;line-height:1.8;font-size:.875rem;color:#cbd5e1}
+  .bubble-user{background:#1e1b4b;border:1px solid #3730a3;border-radius:14px 14px 4px 14px;padding:.8rem 1.1rem;margin:.4rem 0 .4rem 3rem;font-size:.87rem}
+  .bubble-bot{background:#0f172a;border:1px solid #1e293b;border-radius:14px 14px 14px 4px;padding:.8rem 1.1rem;margin:.4rem 3rem .4rem 0;font-size:.87rem}
+  .chip{background:#1e293b;border:1px solid #334155;border-radius:20px;padding:.3rem .85rem;font-size:.75rem;color:#94a3b8;cursor:pointer;white-space:nowrap;transition:all .15s}
+  .chip:hover{border-color:#6366f1;color:#a5b4fc}
+  .upload-zone{border:2px dashed #334155;border-radius:12px;padding:2rem;text-align:center;cursor:pointer;transition:all .2s}
+  .upload-zone:hover{border-color:#6366f1;background:#1e293b22}
+  canvas{max-width:100%}
+  table{width:100%;border-collapse:collapse;font-size:.83rem}
+  th{background:#1e293b;color:#94a3b8;font-weight:600;padding:.6rem .9rem;text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
+  td{padding:.55rem .9rem;border-bottom:1px solid #1e293b;color:#cbd5e1}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#1e293b55}
+  .badge{display:inline-flex;align-items:center;background:#1e293b;border:1px solid #334155;border-radius:20px;padding:.25rem .75rem;font-size:.72rem;color:#94a3b8;font-weight:500}
+  input[type=text],input[type=password],textarea{background:#1e293b;border:1px solid #334155;color:#f1f5f9;border-radius:8px;padding:.55rem .9rem;font-family:'Inter',sans-serif;font-size:.85rem;outline:none;transition:border-color .2s;width:100%}
+  input:focus,textarea:focus{border-color:#6366f1}
+  input[type=file]{display:none}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>const API_BASE = "__API_BASE__";</script>
+<script type="text/babel">
+const API = API_BASE;
+const COLORS = ['#6366f1','#22c55e','#f59e0b','#06b6d4','#ec4899','#8b5cf6','#ef4444','#14b8a6'];
+
+const fmt$ = v => '$' + Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtN = v => Number(v).toLocaleString();
+
+async function apiFetch(path, opts={}) {
+  const res = await fetch(API + path, opts);
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail || res.statusText); }
+  return res.json();
+}
+
+// ── Charts ────────────────────────────────────────────────────────────────────
+function BarChart({labels, datasets, title, horizontal=false}) {
+  const ref = React.useRef();
+  React.useEffect(() => {
+    const ctx = ref.current.getContext('2d');
+    const mapped = datasets.map((d, i) => ({
+      label: d.label,
+      data: d.data,
+      backgroundColor: d.color || COLORS[i],
+      borderRadius: 5,
+      borderSkipped: false,
+    }));
+    const ch = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: mapped },
+      options: {
+        indexAxis: horizontal ? 'y' : 'x',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: datasets.length > 1, labels: { color:'#94a3b8', font:{family:'Inter',size:11} } },
+          title: { display: !!title, text: title, color:'#f1f5f9', font:{family:'Inter',size:13,weight:'700'} },
+        },
+        scales: {
+          x: { ticks:{color:'#64748b',font:{family:'Inter',size:10}}, grid:{color:'#1e293b'}, border:{color:'#1e293b'} },
+          y: { ticks:{color:'#64748b',font:{family:'Inter',size:10}}, grid:{color:'#1e293b'}, border:{color:'#1e293b'} },
+        },
+      }
+    });
+    return () => ch.destroy();
+  }, []);
+  return <canvas ref={ref} style={{height:'260px'}}/>;
+}
+
+function DonutChart({labels, data, title}) {
+  const ref = React.useRef();
+  React.useEffect(() => {
+    const ctx = ref.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'doughnut',
+      data: { labels, datasets: [{ data, backgroundColor: COLORS, borderWidth:0, hoverOffset:4 }] },
+      options: {
+        responsive:true, maintainAspectRatio:false, cutout:'60%',
+        plugins: {
+          legend: { position:'right', labels:{color:'#94a3b8',font:{family:'Inter',size:10},padding:12} },
+          title: { display:!!title, text:title, color:'#f1f5f9', font:{family:'Inter',size:13,weight:'700'} },
+        },
+      }
+    });
+    return () => ch.destroy();
+  }, []);
+  return <canvas ref={ref} style={{height:'260px'}}/>;
+}
+
+function LineChart({labels, data, title}) {
+  const ref = React.useRef();
+  React.useEffect(() => {
+    const ctx = ref.current.getContext('2d');
+    const ch = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{
+        data,
+        borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,.12)',
+        fill:true, tension:.4, pointRadius:0, borderWidth:2,
+      }]},
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend: { display:false },
+          title: { display:!!title, text:title, color:'#f1f5f9', font:{family:'Inter',size:13,weight:'700'} },
+        },
+        scales: {
+          x: { ticks:{color:'#64748b',font:{family:'Inter',size:10},maxTicksLimit:8}, grid:{color:'#1e293b'}, border:{color:'#1e293b'} },
+          y: { ticks:{color:'#64748b',font:{family:'Inter',size:10}}, grid:{color:'#1e293b'}, border:{color:'#1e293b'} },
+        },
+      }
+    });
+    return () => ch.destroy();
+  }, []);
+  return <canvas ref={ref} style={{height:'260px'}}/>;
+}
+
+function ScatterChart({datasets, title}) {
+  const ref = React.useRef();
+  React.useEffect(() => {
+    const ctx = ref.current.getContext('2d');
+    const mapped = datasets.map((d, i) => ({
+      label: d.label,
+      data: d.data,
+      backgroundColor: COLORS[i % COLORS.length] + 'cc',
+      pointRadius: 8,
+      pointHoverRadius: 10,
+    }));
+    const ch = new Chart(ctx, {
+      type: 'scatter',
+      data: { datasets: mapped },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend: { labels:{color:'#94a3b8',font:{family:'Inter',size:10}} },
+          title: { display:!!title, text:title, color:'#f1f5f9', font:{family:'Inter',size:13,weight:'700'} },
+        },
+        scales: {
+          x: { ticks:{color:'#64748b'}, grid:{color:'#1e293b'}, border:{color:'#1e293b'},
+               title:{display:true,text:'Marketing Spend ($)',color:'#64748b',font:{size:10}} },
+          y: { ticks:{color:'#64748b'}, grid:{color:'#1e293b'}, border:{color:'#1e293b'},
+               title:{display:true,text:'Revenue ($)',color:'#64748b',font:{size:10}} },
+        },
+      }
+    });
+    return () => ch.destroy();
+  }, []);
+  return <canvas ref={ref} style={{height:'260px'}}/>;
+}
+
+// ── KPI Card ──────────────────────────────────────────────────────────────────
+function KpiCard({label, value, icon, color='#6366f1'}) {
+  return (
+    <div className="kpi" style={{'--ac': color}}>
+      <div style={{position:'absolute',top:'1rem',right:'1rem',fontSize:'1.3rem',opacity:.2}}>{icon}</div>
+      <div className="kpi-label">{label}</div>
+      <div className="kpi-value" style={{color}}>{value}</div>
+    </div>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+const AGENT_LIST = [
+  {id:'data_ingestion',         name:'Data Ingestion',    icon:'📥'},
+  {id:'customer_feedback',      name:'Customer Feedback', icon:'💬'},
+  {id:'market_research',        name:'Market Research',   icon:'📊'},
+  {id:'swot_analysis',          name:'SWOT Analysis',     icon:'🔲'},
+  {id:'feature_prioritization', name:'Feature Priority',  icon:'🎯'},
+  {id:'strategy_recommendation',name:'Strategy',          icon:'🗺️'},
+  {id:'executive_report',       name:'Exec Report',       icon:'📋'},
+];
+
+function Sidebar({agentStatuses, currentAgent, pipelineRun}) {
+  return (
+    <div className="sidebar" style={{display:'flex',flexDirection:'column',padding:'1.25rem',gap:'1rem'}}>
+      <div style={{display:'flex',alignItems:'center',gap:'.6rem'}}>
+        <div style={{width:34,height:34,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:'.9rem',color:'#fff',flexShrink:0}}>P</div>
+        <div>
+          <div style={{fontWeight:800,fontSize:'1rem',color:'#f1f5f9',letterSpacing:'-.3px'}}>ProductIQ</div>
+          <div style={{fontSize:'.67rem',color:'#475569'}}>AI Strategy Assistant</div>
+        </div>
+      </div>
+      <hr style={{borderColor:'#1e293b'}}/>
+      <div>
+        <div style={{fontSize:'.67rem',fontWeight:700,color:'#475569',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'.5rem'}}>Agent Pipeline</div>
+        <div style={{display:'flex',flexDirection:'column',gap:'.2rem'}}>
+          {AGENT_LIST.map(ag => {
+            const s = currentAgent === ag.id ? 'active' : (agentStatuses[ag.id] || 'pending');
+            const bg = s==='done' ? '#052e1655' : s==='active' ? '#1e1b4b88' : 'transparent';
+            const bc = s==='done' ? '#166534' : s==='active' ? '#4338ca' : 'transparent';
+            return (
+              <div key={ag.id} style={{display:'flex',alignItems:'center',gap:'.55rem',padding:'.4rem .6rem',borderRadius:8,background:bg,border:`1px solid ${bc}`}}>
+                <div className={`agent-dot ${s}`}></div>
+                <div style={{fontSize:'.75rem',fontWeight:600,color:'#e2e8f0'}}>{ag.icon} {ag.name}</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div style={{marginTop:'auto',display:'flex',flexDirection:'column',gap:'.75rem'}}>
+        {pipelineRun && (
+          <button className="btn-secondary" style={{width:'100%'}} onClick={() => window.open(API+'/report','_blank')}>
+            📥 Download PDF
+          </button>
+        )}
+        <div style={{fontSize:'.67rem',color:'#1e293b',lineHeight:1.5}}>GPT-4o Mini · LangGraph · ChromaDB</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Analysis Tab ──────────────────────────────────────────────────────────────
+function AnalysisTab({files, onFilesUploaded, onRun, running, pipelineRun, keyMetrics}) {
+  const [dragging, setDragging] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+  const [error, setError] = React.useState('');
+
+  const KPI_META = [
+    {key:'revenue',    label:'Revenue',     fmt: v => fmt$(v),              color:'#22c55e', icon:'💰'},
+    {key:'profit',     label:'Profit',      fmt: v => fmt$(v),              color:'#6366f1', icon:'📈'},
+    {key:'units',      label:'Units Sold',  fmt: v => fmtN(v),              color:'#f59e0b', icon:'📦'},
+    {key:'avg_rating', label:'Avg Rating',  fmt: v => v.toFixed(1)+' / 5', color:'#06b6d4', icon:'⭐'},
+    {key:'returns',    label:'Returns',     fmt: v => fmtN(v),              color:'#ef4444', icon:'↩️'},
+    {key:'records',    label:'Records',     fmt: v => fmtN(v),              color:'#8b5cf6', icon:'📋'},
+  ];
+
+  async function handleFiles(fileList) {
+    if (!fileList || !fileList.length) return;
+    setUploading(true); setError('');
+    try {
+      const fd = new FormData();
+      Array.from(fileList).forEach(f => fd.append('files', f));
+      const r = await fetch(API + '/upload-full', {method:'POST', body:fd});
+      if (!r.ok) throw new Error(await r.text());
+      const data = await apiFetch('/files');
+      onFilesUploaded(Array.isArray(data) ? data : []);
+    } catch(e) { setError(e.message); }
+    setUploading(false);
+  }
+
+  const csv = files.find(f => f.type === 'csv');
+
+  return (
+    <div style={{padding:'1.5rem'}}>
+      <div style={{marginBottom:'1.25rem'}}>
+        <h2 style={{fontSize:'1.2rem',fontWeight:800,color:'#f1f5f9',marginBottom:'.25rem'}}>Data Analysis</h2>
+        <p style={{fontSize:'.83rem',color:'#64748b'}}>Upload business data and run the 7-agent AI pipeline.</p>
+      </div>
+
+      {files.length === 0 ? (
+        <label
+          className="upload-zone"
+          style={{borderColor: dragging ? '#6366f1' : '#334155', background: dragging ? '#1e293b44' : 'transparent', display:'block'}}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+        >
+          <input type="file" multiple accept=".csv,.pdf,.txt" onChange={e => handleFiles(e.target.files)}/>
+          <div style={{fontSize:'2.5rem',marginBottom:'.75rem'}}>{uploading ? '⏳' : '📂'}</div>
+          <div style={{fontWeight:700,color:'#f1f5f9',marginBottom:'.35rem'}}>{uploading ? 'Uploading…' : 'Drop files or click to browse'}</div>
+          <div style={{fontSize:'.8rem',color:'#64748b'}}>CSV · PDF · TXT &nbsp;|&nbsp; Sales reports, market research, feedback</div>
+        </label>
+      ) : (
+        <div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'.75rem'}}>
+            <div style={{fontWeight:700,color:'#f1f5f9',fontSize:'.9rem'}}>Uploaded Files</div>
+            <label style={{cursor:'pointer',fontSize:'.75rem',color:'#6366f1'}}>
+              <input type="file" multiple accept=".csv,.pdf,.txt" onChange={e => handleFiles(e.target.files)}/>
+              + Add more
+            </label>
+          </div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:'.4rem',marginBottom:'1.25rem'}}>
+            {files.map((f,i) => (
+              <div key={i} style={{display:'inline-flex',alignItems:'center',gap:'.4rem',background:'#1e293b',border:'1px solid #334155',borderRadius:8,padding:'.35rem .75rem',fontSize:'.77rem',color:'#94a3b8'}}>
+                {f.type==='csv'?'📊':f.type==='pdf'?'📄':'📝'} {f.filename}
+                {f.type==='csv' && <span style={{color:'#22c55e',marginLeft:'.3rem'}}>{fmt$(f.revenue||0)}</span>}
+              </div>
+            ))}
+          </div>
+
+          {csv && (
+            <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'.7rem',marginBottom:'1.25rem'}}>
+              {KPI_META.map(m => (
+                <KpiCard key={m.key} label={m.label} value={m.fmt(csv[m.key]||0)} icon={m.icon} color={m.color}/>
+              ))}
+            </div>
+          )}
+
+          <div style={{display:'flex',justifyContent:'center',marginBottom:'1rem'}}>
+            <button className="btn-primary" onClick={onRun} disabled={running} style={{minWidth:220,fontSize:'.95rem',padding:'.7rem 2rem'}}>
+              {running ? '⏳ Running pipeline…' : '⚡  Run Full Analysis'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{background:'#450a0a',border:'1px solid #7f1d1d',borderRadius:10,padding:'.75rem 1rem',color:'#fca5a5',fontSize:'.82rem',marginTop:'.75rem'}}>{error}</div>
+      )}
+
+      {pipelineRun && Object.keys(keyMetrics).length > 0 && (
+        <div style={{marginTop:'1.5rem'}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'.7rem',marginBottom:'1rem'}}>
+            {Object.entries(keyMetrics).map(([k,v],i) => (
+              <KpiCard key={k} label={k} value={v} icon={['💰','📈','📦','⭐','↩️','🧩','🌍','📅'][i]||'📊'} color={COLORS[i%COLORS.length]}/>
+            ))}
+          </div>
+          <div className="card" style={{textAlign:'center',borderColor:'#166534',background:'#052e1633',padding:'1rem'}}>
+            <div style={{color:'#22c55e',fontWeight:700}}>✅ All 7 agents completed</div>
+            <div style={{color:'#64748b',fontSize:'.8rem',marginTop:'.25rem'}}>Switch to Dashboard for charts · Insights for full reports</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Dashboard Tab ─────────────────────────────────────────────────────────────
+function DashboardTab({files}) {
+  const csv = files.find(f => f.type === 'csv');
+
+  if (!csv) return (
+    <div style={{padding:'1.5rem'}}>
+      <div className="card" style={{textAlign:'center',padding:'4rem 2rem'}}>
+        <div style={{fontSize:'2.5rem',marginBottom:'.75rem'}}>📊</div>
+        <div style={{fontWeight:700,color:'#f1f5f9',marginBottom:'.3rem'}}>No CSV data uploaded</div>
+        <div style={{color:'#64748b',fontSize:'.85rem'}}>Upload a sales CSV to see the dashboard.</div>
+      </div>
+    </div>
+  );
+
+  const prods = csv.product_performance || [];
+  const regs  = csv.regional_performance || [];
+  const cats  = csv.category_performance || [];
+
+  return (
+    <div style={{padding:'1.5rem'}}>
+      <div style={{marginBottom:'1.25rem'}}>
+        <h2 style={{fontSize:'1.2rem',fontWeight:800,color:'#f1f5f9',marginBottom:'.2rem'}}>Performance Dashboard</h2>
+        <p style={{fontSize:'.83rem',color:'#64748b'}}>{csv.date_range} · {csv.records} records · {(csv.products||[]).length} products</p>
+      </div>
+
+      {/* KPI row */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'.7rem',marginBottom:'1.25rem'}}>
+        <KpiCard label="Total Revenue"  value={fmt$(csv.revenue||0)}      icon="💰" color="#22c55e"/>
+        <KpiCard label="Total Profit"   value={fmt$(csv.profit||0)}       icon="📈" color="#6366f1"/>
+        <KpiCard label="Units Sold"     value={fmtN(csv.units||0)}        icon="📦" color="#f59e0b"/>
+        <KpiCard label="Avg Rating"     value={(csv.avg_rating||0).toFixed(1)+'/5'} icon="⭐" color="#06b6d4"/>
+        <KpiCard label="Total Returns"  value={fmtN(csv.returns||0)}      icon="↩️" color="#ef4444"/>
+        <KpiCard label="Products"       value={(csv.products||[]).length}  icon="🧩" color="#8b5cf6"/>
+        <KpiCard label="Regions"        value={(csv.regions||[]).length}   icon="🌍" color="#ec4899"/>
+        <KpiCard label="Categories"     value={(csv.categories||[]).length}icon="📂" color="#14b8a6"/>
+      </div>
+
+      {/* Row 1 */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
+        <div className="card">
+          {prods.length > 0 && <BarChart title="Revenue by Product" labels={prods.map(p=>p.Product_Name)}
+            datasets={[{label:'Revenue ($)', data:prods.map(p=>p.Revenue_USD), color:'#6366f1'}]}/>}
+        </div>
+        <div className="card">
+          {prods.length > 0 && <BarChart title="Revenue vs Profit" labels={prods.map(p=>p.Product_Name)}
+            datasets={[{label:'Revenue',data:prods.map(p=>p.Revenue_USD),color:'#6366f1'},{label:'Profit',data:prods.map(p=>p.Profit_USD),color:'#22c55e'}]}/>}
+        </div>
+      </div>
+
+      {/* Row 2 */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
+        <div className="card">
+          {regs.length > 0 && <BarChart title="Revenue by Region" labels={regs.map(r=>r.Region)}
+            datasets={[{label:'Revenue ($)', data:regs.map(r=>r.Revenue_USD), color:'#06b6d4'}]}/>}
+        </div>
+        <div className="card">
+          {cats.length > 0 && <DonutChart title="Revenue by Category" labels={cats.map(c=>c.Category)} data={cats.map(c=>c.Revenue_USD)}/>}
+        </div>
+      </div>
+
+      {/* Row 3 */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem',marginBottom:'1rem'}}>
+        <div className="card">
+          {prods.length > 0 && <BarChart title="Customer Rating by Product" labels={prods.map(p=>p.Product_Name)}
+            datasets={[{label:'Rating', data:prods.map(p=>parseFloat((p.Customer_Rating||0).toFixed(2))), color:'#f59e0b'}]}/>}
+        </div>
+        <div className="card">
+          {prods.length > 0 && <ScatterChart title="Marketing Spend vs Revenue"
+            datasets={prods.map(p => ({label:p.Product_Name, data:[{x:p.Marketing_Spend_USD||0,y:p.Revenue_USD||0}]}))}/>}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="card">
+        <div style={{fontSize:'.7rem',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'.75rem'}}>Product Performance Table</div>
+        <div style={{overflowX:'auto'}}>
+          <table>
+            <thead><tr><th>Product</th><th>Revenue</th><th>Profit</th><th>Units</th><th>Rating</th><th>Returns</th><th>Mktg Spend</th></tr></thead>
+            <tbody>
+              {[...prods].sort((a,b) => b.Revenue_USD - a.Revenue_USD).map((p,i) => (
+                <tr key={i}>
+                  <td style={{fontWeight:600,color:'#f1f5f9'}}>{p.Product_Name}</td>
+                  <td style={{color:'#22c55e'}}>{fmt$(p.Revenue_USD)}</td>
+                  <td style={{color:'#6366f1'}}>{fmt$(p.Profit_USD)}</td>
+                  <td>{fmtN(p.Units_Sold)}</td>
+                  <td style={{color:'#f59e0b'}}>{(p.Customer_Rating||0).toFixed(2)} ★</td>
+                  <td style={{color:p.Returns>10?'#ef4444':'#94a3b8'}}>{p.Returns||0}</td>
+                  <td>{fmt$(p.Marketing_Spend_USD||0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Insights Tab ──────────────────────────────────────────────────────────────
+function InsightsTab({insights, hasReport}) {
+  const [active, setActive] = React.useState('customer');
+  const SECTIONS = [
+    {id:'customer',  label:'💬 Customer',     key:'customer_insights',        color:'#06b6d4'},
+    {id:'market',    label:'📊 Market',       key:'market_research',          color:'#8b5cf6'},
+    {id:'swot',      label:'🔲 SWOT',         key:'swot_analysis',            color:'#f59e0b'},
+    {id:'opps',      label:'💡 Opportunities',key:'opportunity_assessment',   color:'#6366f1'},
+    {id:'features',  label:'🎯 Features',     key:'feature_prioritization',   color:'#22c55e'},
+    {id:'strategy',  label:'🗺️ Strategy',     key:'strategy_recommendations', color:'#ec4899'},
+    {id:'executive', label:'📋 Executive',    key:'executive_summary',        color:'#f59e0b'},
+  ];
+  const cur = SECTIONS.find(s => s.id === active);
+  const content = insights[cur.key] || 'No data yet — run the pipeline first.';
+
+  return (
+    <div style={{padding:'1.5rem'}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'1.25rem'}}>
+        <div>
+          <h2 style={{fontSize:'1.2rem',fontWeight:800,color:'#f1f5f9',marginBottom:'.2rem'}}>AI Insights</h2>
+          <p style={{fontSize:'.83rem',color:'#64748b'}}>Generated by 7 specialized AI agents</p>
+        </div>
+        {hasReport && (
+          <button className="btn-secondary" onClick={() => window.open(API+'/report','_blank')}>📥 Download PDF</button>
+        )}
+      </div>
+
+      <div style={{display:'flex',gap:'.35rem',flexWrap:'wrap',marginBottom:'1.25rem',background:'#0f172a',border:'1px solid #1e293b',borderRadius:12,padding:4}}>
+        {SECTIONS.map(s => (
+          <button key={s.id} className={`tab-btn ${active===s.id?'active':''}`} onClick={() => setActive(s.id)}>{s.label}</button>
+        ))}
+      </div>
+
+      <div className="card" style={{borderTopColor:cur.color,borderTopWidth:3}}>
+        <div style={{fontSize:'.7rem',fontWeight:700,color:cur.color,textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'.75rem'}}>
+          {cur.label.replace(/^\S+\s/,'')}
+        </div>
+        <div className="insight-box">{content}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Chat Tab ──────────────────────────────────────────────────────────────────
+function ChatTab({pipelineRun}) {
+  const [history, setHistory] = React.useState([]);
+  const [input, setInput]     = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const endRef = React.useRef();
+
+  const SUGGESTIONS = ['Best profit margin product?','Top customer complaints?','Which region to focus on?','Top 3 strategic priorities?','Invest vs phase out products?'];
+
+  async function send(q) {
+    if (!q.trim() || loading) return;
+    setHistory(h => [...h, {role:'user', content:q}]);
+    setInput(''); setLoading(true);
+    try {
+      const r = await apiFetch('/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q})});
+      setHistory(h => [...h, {role:'assistant', content:r.answer}]);
+    } catch(e) {
+      setHistory(h => [...h, {role:'assistant', content:'Error: '+e.message}]);
+    }
+    setLoading(false);
+    setTimeout(() => endRef.current?.scrollIntoView({behavior:'smooth'}), 100);
+  }
+
+  if (!pipelineRun) return (
+    <div style={{padding:'1.5rem'}}>
+      <div className="card" style={{textAlign:'center',padding:'4rem 2rem'}}>
+        <div style={{fontSize:'2.5rem',marginBottom:'.75rem'}}>💬</div>
+        <div style={{fontWeight:700,color:'#f1f5f9',marginBottom:'.3rem'}}>Chat not ready</div>
+        <div style={{color:'#64748b',fontSize:'.85rem'}}>Run the analysis pipeline first.</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{padding:'1.5rem',display:'flex',flexDirection:'column',height:'calc(100vh - 100px)'}}>
+      <div style={{marginBottom:'1rem'}}>
+        <h2 style={{fontSize:'1.2rem',fontWeight:800,color:'#f1f5f9',marginBottom:'.2rem'}}>Strategy Assistant</h2>
+        <p style={{fontSize:'.83rem',color:'#64748b'}}>Ask anything about your product data and strategy insights.</p>
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:'.4rem',marginBottom:'1rem'}}>
+        {SUGGESTIONS.map((s,i) => <span key={i} className="chip" onClick={() => send(s)}>{s}</span>)}
+      </div>
+      <div style={{flex:1,overflowY:'auto',marginBottom:'1rem'}}>
+        {history.length === 0 && <div style={{color:'#334155',fontSize:'.85rem',textAlign:'center',marginTop:'2rem'}}>Ask a question above ↑</div>}
+        {history.map((m,i) => m.role==='user' ? (
+          <div key={i} className="bubble-user">
+            <div style={{fontSize:'.67rem',fontWeight:700,color:'#818cf8',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'.25rem'}}>You</div>
+            {m.content}
+          </div>
+        ) : (
+          <div key={i} className="bubble-bot">
+            <div style={{fontSize:'.67rem',fontWeight:700,color:'#22c55e',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:'.25rem'}}>ProductIQ</div>
+            <div style={{whiteSpace:'pre-wrap'}}>{m.content}</div>
+          </div>
+        ))}
+        {loading && <div className="bubble-bot"><div style={{color:'#475569'}}>Thinking…</div></div>}
+        <div ref={endRef}/>
+      </div>
+      <div style={{display:'flex',gap:'.5rem'}}>
+        <input type="text" value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key==='Enter' && send(input)}
+          placeholder="Ask about your product strategy…" style={{flex:1}}/>
+        <button className="btn-primary" onClick={() => send(input)} disabled={!input.trim()||loading}>Send</button>
+        {history.length > 0 && <button className="btn-secondary" onClick={() => setHistory([])}>Clear</button>}
+      </div>
+    </div>
+  );
+}
+
+// ── Architecture Tab ──────────────────────────────────────────────────────────
+function ArchTab({agentStatuses}) {
+  const ARCH_AGENTS = [
+    {id:'data_ingestion',         name:'Data Ingestion',    icon:'📥', role:'Parse & index files'},
+    {id:'customer_feedback',      name:'Customer Feedback', icon:'💬', role:'Sentiment & reviews'},
+    {id:'market_research',        name:'Market Research',   icon:'📊', role:'Trends & regional'},
+    {id:'swot_analysis',          name:'SWOT Analysis',     icon:'🔲', role:'SWOT + opportunities'},
+    {id:'feature_prioritization', name:'Feature Priority',  icon:'🎯', role:'ICE scoring'},
+    {id:'strategy_recommendation',name:'Strategy',          icon:'🗺️', role:'Roadmap & actions'},
+    {id:'executive_report',       name:'Exec Report',       icon:'📋', role:'Summary & PDF'},
+  ];
+  return (
+    <div style={{padding:'1.5rem'}}>
+      <div style={{marginBottom:'1.25rem'}}>
+        <h2 style={{fontSize:'1.2rem',fontWeight:800,color:'#f1f5f9',marginBottom:'.2rem'}}>System Architecture</h2>
+        <p style={{fontSize:'.83rem',color:'#64748b'}}>7 LangGraph agents in a sequential DAG, each building on prior context.</p>
+      </div>
+
+      <div className="card" style={{marginBottom:'1rem'}}>
+        <div style={{fontSize:'.7rem',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'1rem'}}>Agent Pipeline Flow</div>
+        <div style={{display:'flex',alignItems:'center',gap:'.3rem',flexWrap:'wrap'}}>
+          {ARCH_AGENTS.map((ag,i) => {
+            const s = agentStatuses[ag.id] || 'pending';
+            const c = s==='done'?'#22c55e':s==='active'?'#6366f1':'#334155';
+            return (
+              <React.Fragment key={ag.id}>
+                <div style={{background:'#0a0f1e',border:`1px solid ${c}`,borderRadius:10,padding:'.6rem .8rem',textAlign:'center',minWidth:88}}>
+                  <div style={{fontSize:'1.2rem'}}>{ag.icon}</div>
+                  <div style={{fontSize:'.63rem',fontWeight:700,color:c,marginTop:'.2rem',lineHeight:1.2}}>{ag.name}</div>
+                  <div style={{fontSize:'.58rem',color:'#475569',marginTop:'.1rem'}}>{ag.role}</div>
+                </div>
+                {i < ARCH_AGENTS.length-1 && <div style={{color:'#334155',fontSize:'1rem'}}>→</div>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'1rem'}}>
+        <div className="card">
+          <div style={{fontSize:'.7rem',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'.75rem'}}>Tech Stack</div>
+          <table>
+            <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+            <tbody>
+              {[['AI Model','GPT-4o Mini'],['Embeddings','text-embedding-3-small'],['Orchestration','LangGraph (DAG)'],['Vector DB','ChromaDB / Pinecone'],['Backend','FastAPI'],['Frontend','React + Tailwind CSS'],['PDF','ReportLab'],['Deployment','Render']].map(([l,t]) => (
+                <tr key={l}><td style={{color:'#94a3b8'}}>{l}</td><td style={{color:'#f1f5f9',fontWeight:500}}>{t}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="card">
+          <div style={{fontSize:'.7rem',fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'.8px',marginBottom:'.75rem'}}>Deployment</div>
+          <div style={{fontSize:'.82rem',color:'#64748b',marginBottom:'.6rem'}}>Single command — no separate processes needed.</div>
+          <div style={{background:'#0a0f1e',borderRadius:8,padding:'.7rem 1rem',fontFamily:'monospace',fontSize:'.82rem',color:'#a5b4fc',marginBottom:'.75rem'}}>streamlit run app.py</div>
+          <div style={{fontSize:'.75rem',color:'#475569',lineHeight:1.6}}>
+            Render start command:<br/>
+            <code style={{color:'#818cf8',fontSize:'.72rem'}}>streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Root ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab]                 = React.useState('analysis');
+  const [files, setFiles]             = React.useState([]);
+  const [running, setRunning]         = React.useState(false);
+  const [pipelineRun, setPipelineRun] = React.useState(false);
+  const [agentStatuses, setAgentSt]   = React.useState({});
+  const [currentAgent, setCurrent]    = React.useState(null);
+  const [keyMetrics, setMetrics]      = React.useState({});
+  const [insights, setInsights]       = React.useState({});
+  const [hasReport, setHasReport]     = React.useState(false);
+  const pollRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (running) {
+      pollRef.current = setInterval(async () => {
+        try {
+          const s = await apiFetch('/status');
+          setAgentSt(s.agent_statuses || {});
+          setCurrent(s.current_agent);
+          if (!s.pipeline_running) {
+            clearInterval(pollRef.current);
+            setRunning(false);
+            setPipelineRun(s.pipeline_run);
+            setHasReport(s.has_report);
+            setMetrics(s.key_metrics || {});
+            if (s.pipeline_run) {
+              const ins = await apiFetch('/insights');
+              setInsights(ins);
+            }
+          }
+        } catch(e) {}
+      }, 1500);
+    }
+    return () => clearInterval(pollRef.current);
+  }, [running]);
+
+  async function handleRun() {
+    setRunning(true);
+    setAgentSt({});
+    try {
+      await apiFetch('/run', {method:'POST'});
+    } catch(e) {
+      setRunning(false);
+      alert('Error: ' + e.message);
+    }
+  }
+
+  const TABS = [
+    {id:'analysis',   label:'⚡ Analysis'},
+    {id:'dashboard',  label:'📈 Dashboard'},
+    {id:'insights',   label:'🗂 Insights'},
+    {id:'chat',       label:'💬 Chat'},
+    {id:'arch',       label:'🏗 Architecture'},
+  ];
+
+  const doneCount = Object.values(agentStatuses).filter(v => v==='done').length;
+
+  return (
+    <div style={{display:'flex',minHeight:'100vh'}}>
+      <Sidebar agentStatuses={agentStatuses} currentAgent={currentAgent} pipelineRun={pipelineRun}/>
+      <div className="main">
+        {/* topbar */}
+        <div style={{background:'#0f172a',borderBottom:'1px solid #1e293b',padding:'.65rem 1.5rem',display:'flex',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:30}}>
+          <div style={{display:'flex',gap:'.3rem',background:'#0a0f1e',border:'1px solid #1e293b',borderRadius:10,padding:3}}>
+            {TABS.map(t => (
+              <button key={t.id} className={`tab-btn ${tab===t.id?'active':''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:'.5rem',alignItems:'center'}}>
+            <span className="badge">GPT-4o Mini</span>
+            <span className="badge">LangGraph · 7 Agents</span>
+            <span className="badge" style={{borderColor:pipelineRun?'#166534':'#334155',color:pipelineRun?'#22c55e':'#64748b'}}>
+              {pipelineRun ? '✅ Ready' : '○ Awaiting'}
+            </span>
+            {running && (
+              <div style={{display:'flex',alignItems:'center',gap:'.4rem'}}>
+                <div style={{display:'flex',gap:2}}>
+                  {[0,1,2].map(i => <div key={i} style={{width:5,height:5,borderRadius:'50%',background:'#6366f1',animation:`pulse ${0.6+i*0.15}s infinite`}}></div>)}
+                </div>
+                <span style={{fontSize:'.75rem',color:'#818cf8'}}>Running…</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* progress bar */}
+        {running && (
+          <div style={{padding:'0 1.5rem .4rem',background:'#0f172a',borderBottom:'1px solid #1e293b'}}>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{width: `${Math.round(doneCount/7*100)}%`}}></div>
+            </div>
+            {currentAgent && <div style={{fontSize:'.7rem',color:'#64748b',marginTop:'.3rem'}}>Running: {currentAgent.replace(/_/g,' ')}</div>}
+          </div>
+        )}
+
+        {tab==='analysis'  && <AnalysisTab files={files} onFilesUploaded={setFiles} onRun={handleRun} running={running} pipelineRun={pipelineRun} keyMetrics={keyMetrics}/>}
+        {tab==='dashboard' && <DashboardTab files={files}/>}
+        {tab==='insights'  && <InsightsTab insights={insights} hasReport={hasReport}/>}
+        {tab==='chat'      && <ChatTab pipelineRun={pipelineRun}/>}
+        {tab==='arch'      && <ArchTab agentStatuses={agentStatuses}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

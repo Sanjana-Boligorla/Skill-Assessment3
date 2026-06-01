@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: product-strategy-assistant
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: OPENAI_API_KEY
+        value: learner052
+      - key: OPENAI_BASE_URL
+        value: https://keygateway.arshnivlabs.com/v1
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        value: product-strategy
+      - key: USE_PINECONE
+        value: "false"
